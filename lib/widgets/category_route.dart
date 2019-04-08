@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:unit_converter/widgets/category.dart';
+import 'package:unit_converter/widgets/category_tile.dart';
 import 'package:unit_converter/widgets/unit.dart';
 
 final _backgroundColor = Colors.green[100];
@@ -12,6 +13,9 @@ class CategoryRoute extends StatefulWidget {
 }
 
 class _CategoryRouteState extends State<CategoryRoute> {
+  Category _defaultCategory;
+  Category _currentCategory;
+
   final _categories = <Category>[];
   static const _categoryNames = <String>[
     'Length',
@@ -63,28 +67,37 @@ class _CategoryRouteState extends State<CategoryRoute> {
   void initState() {
     super.initState();
     for (var i = 0; i < _categoryNames.length; i++) {
-      _categories.add(Category(
+      var category = Category(
         name: _categoryNames[i],
         color: _baseColors[i],
         iconLocation: Icons.cake,
         units: _retrieveUnitList(_categoryNames[i]),
-      ));
+      );
+
+      if (i == 0) {
+        _defaultCategory = category;
+      }
+
+      _categories.add(category);
     }
   }
 
+  void _onCategoryTap(Category category) {
+    setState(() {
+      _currentCategory = category;
+    });
+  }
+
   Widget _buildCategoryWidgets() {
-    if (MediaQuery.of(context).orientation == Orientation.portrait) {
-      return ListView.builder(
-        itemBuilder: (BuildContext context, int index) => _categories[index],
-        itemCount: _categories.length,
-      );
-    } else {
-      return GridView.count(
-        crossAxisCount: 2,
-        childAspectRatio: 3.0,
-        children: _categories,
-      );
-    }
+    return ListView.builder(
+      itemBuilder: (BuildContext context, int index) {
+        return CategoryTile(
+          category: _categories[index],
+          onTap: _onCategoryTap,
+        );
+      },
+      itemCount: _categories.length,
+    );
   }
 
   List<Unit> _retrieveUnitList(String categoryName) {
@@ -99,7 +112,7 @@ class _CategoryRouteState extends State<CategoryRoute> {
 
   @override
   Widget build(BuildContext context) {
-    final listView = Container(
+    /*final listView = Container(
       color: _backgroundColor,
       padding: EdgeInsets.symmetric(horizontal: 8.0),
       child: _buildCategoryWidgets(),
@@ -121,6 +134,6 @@ class _CategoryRouteState extends State<CategoryRoute> {
     return Scaffold(
       appBar: appBar,
       body: listView,
-    );
+    );*/
   }
 }
