@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:unit_converter/widgets/category.dart';
-import 'package:unit_converter/widgets/category_tile.dart';
-import 'package:unit_converter/widgets/unit.dart';
 
-final _backgroundColor = Colors.green[100];
+import 'dart:convert';
+
+import 'package:unit_converter/widgets/category.dart';
+import 'package:unit_converter/widgets/backdrop.dart';
+import 'package:unit_converter/widgets/category_tile.dart';
+import 'package:unit_converter/widgets/unit_converter.dart';
+import 'package:unit_converter/widgets/unit.dart';
 
 class CategoryRoute extends StatefulWidget {
   const CategoryRoute();
@@ -17,16 +20,6 @@ class _CategoryRouteState extends State<CategoryRoute> {
   Category _currentCategory;
 
   final _categories = <Category>[];
-  static const _categoryNames = <String>[
-    'Length',
-    'Area',
-    'Volume',
-    'Mass',
-    'Time',
-    'Digital Storage',
-    'Energy',
-    'Currency',
-  ];
   static const _baseColors = <ColorSwatch>[
     ColorSwatch(0xFF6AB7A8, {
       'highlight': Color(0xFF6AB7A8),
@@ -63,23 +56,52 @@ class _CategoryRouteState extends State<CategoryRoute> {
     }),
   ];
 
+  static const _icons = <String>[
+    'assets/icons/length.png',
+    'assets/icons/area.png',
+    'assets/icons/volume.png',
+    'assets/icons/mass.png',
+    'assets/icons/time.png',
+    'assets/icons/digital_storage.png',
+    'assets/icons/power.png',
+    'assets/icons/currency.png',
+  ];
+
   @override
-  void initState() {
-    super.initState();
-    for (var i = 0; i < _categoryNames.length; i++) {
-      var category = Category(
-        name: _categoryNames[i],
-        color: _baseColors[i],
-        iconLocation: Icons.cake,
-        units: _retrieveUnitList(_categoryNames[i]),
-      );
-
-      if (i == 0) {
-        _defaultCategory = category;
-      }
-
-      _categories.add(category);
+  Future<void> didChangeDependencies() async {
+    super.didChangeDependencies();
+    if (_categories.isEmpty) {
+      await _retrieveLocalCategories();
     }
+  }
+
+  Future<void> _retrieveLocalCategories() async {
+    final json = DefaultAssetBundle.of(context)
+        .loadString('assets/data/regular_units.json');
+    final data = JsonDecoder().convert(await json);
+
+    if (data is! Map) {
+      throw ('Data retrieved from API is not a Map');
+    }
+
+    var categoryIndex = 0;
+    data.keys.forEach((key) {
+      final List<Unit> units =
+          data[key].map<Unit>((dynamic data) => Unit.fromJson(data)).toList();
+
+      var category = Category(
+          name: key,
+          units: units,
+          color: _baseColors[categoryIndex],
+          iconLocation: _icons[categoryIndex]);
+      setState(() {
+        if (categoryIndex == 0) {
+          _defaultCategory = category;
+        }
+        _categories.add(category);
+      });
+      categoryIndex += 1;
+    });
   }
 
   void _onCategoryTap(Category category) {
@@ -88,16 +110,26 @@ class _CategoryRouteState extends State<CategoryRoute> {
     });
   }
 
-  Widget _buildCategoryWidgets() {
-    return ListView.builder(
-      itemBuilder: (BuildContext context, int index) {
-        return CategoryTile(
-          category: _categories[index],
-          onTap: _onCategoryTap,
-        );
-      },
-      itemCount: _categories.length,
-    );
+  Widget _buildCategoryWidgets(Orientation deviceOrientation) {
+    if (deviceOrientation == Orientation.portrait) {
+      return ListView.builder(
+        itemBuilder: (BuildContext context, int index) {
+          return CategoryTile(
+            category: _categories[index],
+            onTap: _onCategoryTap,
+          );
+        },
+        itemCount: _categories.length,
+      );
+    } else {
+      return GridView.count(
+        crossAxisCount: 2,
+        childAspectRatio: 3.0,
+        children: _categories.map((Category c) {
+          return CategoryTile(category: c, onTap: _onCategoryTap);
+        }).toList(),
+      );
+    }
   }
 
   List<Unit> _retrieveUnitList(String categoryName) {
@@ -112,28 +144,36 @@ class _CategoryRouteState extends State<CategoryRoute> {
 
   @override
   Widget build(BuildContext context) {
-    /*final listView = Container(
-      color: _backgroundColor,
-      padding: EdgeInsets.symmetric(horizontal: 8.0),
-      child: _buildCategoryWidgets(),
-    );
-
-    final appBar = AppBar(
-      elevation: 0.0,
-      title: Text(
-        'Unit Converter',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 30.0,
+    if (_categories.isEmpty) {
+      return Center(
+        child: Container(
+          height: 180.0,
+          width: 180.0,
+          child: CircularProgressIndicator(),
         ),
-      ),
-      centerTitle: true,
-      backgroundColor: _backgroundColor,
+      );
+    }
+
+    assert(debugCheckHasMediaQuery(context));
+
+    final listView = Padding(
+      padding: EdgeInsets.only(left: 8.0, right: 8.0, bottom: 48.0),
+      child: _buildCategoryWidgets(MediaQuery.of(context).orientation),
     );
 
-    return Scaffold(
-      appBar: appBar,
-      body: listView,
-    );*/
+    return Backdrop(
+      currentCategory:
+          _currentCategory == null ? _defaultCategory : _currentCategory,
+      frontPanel: _currentCategory == null
+          ? UnitConverter(
+              category: _defaultCategory,
+            )
+          : UnitConverter(
+              category: _currentCategory,
+            ),
+      backPanel: listView,
+      frontTitle: Text('Unit Converter'),
+      backTitle: Text('Select a Category'),
+    );
   }
 }

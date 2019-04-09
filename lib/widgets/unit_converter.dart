@@ -24,6 +24,7 @@ class _UnitConverterState extends State<UnitConverter> {
   String _convertedValue = '';
   List<DropdownMenuItem> _unitMenuItems;
   bool _showValidationError = false;
+  final _inputKey = GlobalKey(debugLabel: 'inputText');
 
   @override
   void initState() {
@@ -175,6 +176,7 @@ class _UnitConverterState extends State<UnitConverter> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           TextField(
+            key: _inputKey,
             style: Theme.of(context).textTheme.display1,
             decoration: InputDecoration(
                 labelStyle: Theme.of(context).textTheme.display1,
@@ -233,7 +235,24 @@ class _UnitConverterState extends State<UnitConverter> {
 
     return Padding(
       padding: _padding,
-      child: converter,
+      child: OrientationBuilder(
+        builder: (BuildContext context, Orientation orientation) {
+          if (orientation == Orientation.portrait) {
+            return SingleChildScrollView(
+              child: converter,
+            );
+          } else {
+            return SingleChildScrollView(
+              child: Center(
+                child: Container(
+                  width: 450,
+                  child: converter,
+                ),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 }
