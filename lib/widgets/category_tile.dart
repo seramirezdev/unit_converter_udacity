@@ -14,7 +14,6 @@ class CategoryTile extends StatelessWidget {
     @required this.category,
     this.onTap,
   })  : assert(category != null),
-        assert(onTap != null),
         super(key: key);
 
   @override
