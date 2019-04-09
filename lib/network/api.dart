@@ -40,13 +40,13 @@ class Api {
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     try {
       final httpRequest = await _httpClient.getUrl(uri);
-      final HttpResponse = await httpRequest.close();
+      final httpResponse = await httpRequest.close();
 
-      if (HttpResponse.statusCode != HttpStatus.ok) {
+      if (httpResponse.statusCode != HttpStatus.ok) {
         return null;
       }
 
-      final responseBody = await HttpResponse.transform(utf8.decoder).join();
+      final responseBody = await httpResponse.transform(utf8.decoder).join();
       return json.decode(responseBody);
     } on Exception catch (e) {
       print('$e');

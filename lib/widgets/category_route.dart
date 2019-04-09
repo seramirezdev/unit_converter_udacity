@@ -168,16 +168,6 @@ class _CategoryRouteState extends State<CategoryRoute> {
     }
   }
 
-  List<Unit> _retrieveUnitList(String categoryName) {
-    return List.generate(10, (int i) {
-      i += 1;
-      return Unit(
-        name: '$categoryName Unit $i',
-        conversion: i.toDouble(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_categories.isEmpty) {
