@@ -7,6 +7,7 @@ import 'package:unit_converter/widgets/backdrop.dart';
 import 'package:unit_converter/widgets/category_tile.dart';
 import 'package:unit_converter/widgets/unit_converter.dart';
 import 'package:unit_converter/widgets/unit.dart';
+import 'package:unit_converter/network/api.dart';
 
 class CategoryRoute extends StatefulWidget {
   const CategoryRoute();
@@ -72,6 +73,37 @@ class _CategoryRouteState extends State<CategoryRoute> {
     super.didChangeDependencies();
     if (_categories.isEmpty) {
       await _retrieveLocalCategories();
+      await _retrieveApiCategory();
+    }
+  }
+
+  Future<void> _retrieveApiCategory() async {
+    setState(() {
+      _categories.add(Category(
+        name: apiCategory['name'],
+        units: [],
+        color: _baseColors.last,
+        iconLocation: _icons.last,
+      ));
+    });
+
+    final api = Api();
+    final jsonUnits = await api.getUnits(apiCategory['route']);
+
+    if (jsonUnits != null) {
+      final units = <Unit>[];
+      for (var unit in jsonUnits) {
+        units.add(Unit.fromJson(unit));
+      }
+
+      setState(() {
+        _categories.removeLast();
+        _categories.add(Category(
+            name: apiCategory['name'],
+            units: units,
+            color: _baseColors.last,
+            iconLocation: _icons.last));
+      });
     }
   }
 
@@ -114,9 +146,13 @@ class _CategoryRouteState extends State<CategoryRoute> {
     if (deviceOrientation == Orientation.portrait) {
       return ListView.builder(
         itemBuilder: (BuildContext context, int index) {
+          var _category = _categories[index];
           return CategoryTile(
             category: _categories[index],
-            onTap: _onCategoryTap,
+            onTap:
+                _category.name == apiCategory['name'] && _category.units.isEmpty
+                    ? null
+                    : _onCategoryTap,
           );
         },
         itemCount: _categories.length,

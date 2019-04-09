@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:unit_converter/widgets/unit.dart';
 import 'package:unit_converter/widgets/category.dart';
+import 'package:unit_converter/network/api.dart';
 
 const _padding = EdgeInsets.all(16.0);
 
 class UnitConverter extends StatefulWidget {
-  
   final Category category;
 
-  const UnitConverter({
-    @required this.category
-  }) : assert (category != null);
+  const UnitConverter({@required this.category}) : assert(category != null);
 
   @override
   State<StatefulWidget> createState() => _UnitConverterState();
@@ -25,6 +23,7 @@ class _UnitConverterState extends State<UnitConverter> {
   List<DropdownMenuItem> _unitMenuItems;
   bool _showValidationError = false;
   final _inputKey = GlobalKey(debugLabel: 'inputText');
+  bool _showErrorUI = false;
 
   @override
   void initState() {
@@ -85,10 +84,28 @@ class _UnitConverterState extends State<UnitConverter> {
     return outputNum;
   }
 
-  void _updateConversion() {
-    setState(() {
-      _convertedValue = _format(_inputValue * (_toValue.conversion / _fromValue.conversion));
-    });
+  Future<void> _updateConversion() async {
+    if (widget.category.name == apiCategory['name']) {
+      final api = Api();
+      final conversion = await api.convert(apiCategory['route'],
+          _inputValue.toString(), _fromValue.name, _toValue.name);
+
+      if (conversion == null) {
+        setState(() {
+          _showErrorUI = true;
+        });
+      } else {
+        setState(() {
+          _showErrorUI = false;
+          _convertedValue = _format(conversion);
+        });
+      }
+    } else {
+      setState(() {
+        _convertedValue = _format(
+            _inputValue * (_toValue.conversion / _fromValue.conversion));
+      });
+    }
   }
 
   void _updateInputValue(String input) {
@@ -101,7 +118,7 @@ class _UnitConverterState extends State<UnitConverter> {
           _showValidationError = false;
           _inputValue = inputDouble;
           _updateConversion();
-        } on Exception catch(e) {
+        } on Exception catch (e) {
           print('Error $e');
           _showValidationError = true;
         }
@@ -138,11 +155,11 @@ class _UnitConverterState extends State<UnitConverter> {
     }
   }
 
-  Widget _createDropDown(String currentValue, ValueChanged<dynamic> onChanged){
+  Widget _createDropDown(String currentValue, ValueChanged<dynamic> onChanged) {
     return Container(
       margin: EdgeInsets.only(top: 16.0),
       decoration: BoxDecoration(
-        color: Colors.grey[50], 
+        color: Colors.grey[50],
         border: Border.all(
           color: Colors.grey[400],
           width: 1.0,
@@ -170,6 +187,38 @@ class _UnitConverterState extends State<UnitConverter> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.category.units == null ||
+        (widget.category.name) == apiCategory['name'] && _showErrorUI) {
+      return SingleChildScrollView(
+        child: Container(
+          margin: _padding,
+          padding: _padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.0),
+            color: widget.category.color['error'],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.error_outline,
+                size: 180.0,
+                color: Colors.white,
+              ),
+              Text(
+                "Oh no! We can't connect rigth now!",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headline.copyWith(
+                  color: Colors.white,
+                ),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
     final input = Padding(
       padding: _padding,
       child: Column(
@@ -185,8 +234,8 @@ class _UnitConverterState extends State<UnitConverter> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0.0),
                 )),
-                keyboardType: TextInputType.number,
-                onChanged: _updateInputValue,
+            keyboardType: TextInputType.number,
+            onChanged: _updateInputValue,
           ),
           _createDropDown(_fromValue.name, _updateFromConversion)
         ],
@@ -212,12 +261,10 @@ class _UnitConverterState extends State<UnitConverter> {
               style: Theme.of(context).textTheme.display1,
             ),
             decoration: InputDecoration(
-              labelText: 'Output',
-              labelStyle: Theme.of(context).textTheme.display1,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0.0)
-              )
-            ),
+                labelText: 'Output',
+                labelStyle: Theme.of(context).textTheme.display1,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(0.0))),
           ),
           _createDropDown(_toValue.name, _updateToConversion)
         ],
@@ -226,11 +273,7 @@ class _UnitConverterState extends State<UnitConverter> {
 
     final converter = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        input, 
-        arrows,
-        output
-      ],
+      children: <Widget>[input, arrows, output],
     );
 
     return Padding(
